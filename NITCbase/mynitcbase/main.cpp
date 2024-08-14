@@ -6,72 +6,55 @@
 #include <stdlib.h>
 #include <vector>
 #include <string.h>
+
 using namespace std;
 int main(int argc, char *argv[])
 {
   Disk disk_run;
+  StaticBuffer buffer;
+  OpenRelTable cache;
 
-  // create objects for the relation catalog and attribute catalog
-  RecBuffer relCatBuffer(RELCAT_BLOCK);
-  RecBuffer attrCatBuffer(ATTRCAT_BLOCK);
+  /*
+  for i = 0 and i = 1 (i.e RELCAT_RELID and ATTRCAT_RELID)
 
-  //   struct HeadInfo* relCatHeader=(struct HeadInfo*)malloc(sizeof(struct HeadInfo));
-  //   struct HeadInfo* attrCatHeader=(struct HeadInfo*)malloc(sizeof(struct HeadInfo));
+      get the relation catalog entry using RelCacheTable::getRelCatEntry()
+      printf("Relation: %s\n", relname);
 
-  HeadInfo relCatHeader;
-  HeadInfo attrCatHeader;
+      for j = 0 to numAttrs of the relation - 1
+          get the attribute catalog entry for (rel-id i, attribute offset j)
+           in attrCatEntry using AttrCacheTable::getAttrCatEntry()
 
-  // load the headers of both the blocks into relCatHeader and attrCatHeader.
-  // (we will implement these functions later)
-  relCatBuffer.getHeader(&relCatHeader);
-  attrCatBuffer.getHeader(&attrCatHeader);
+          printf("  %s: %s\n", attrName, attrType);
+  */
+  RelCatEntry *relCatBuf = new RelCatEntry();
+  RelCacheTable::getRelCatEntry(RELCAT_RELID, relCatBuf);
+  cout << "Relation: " << relCatBuf->relName << endl;
 
-  vector<int> attrBlockLL;
-  attrBlockLL.push_back(ATTRCAT_BLOCK);
-  while (attrCatHeader.rblock != -1)
+  for (int j = 0; j < relCatBuf->numAttrs; j++)
   {
-    attrBlockLL.push_back(attrCatHeader.rblock);
-    RecBuffer temp(attrCatHeader.rblock);
-    temp.getHeader(&attrCatHeader);
+    AttrCatEntry *attrCatBuf = new AttrCatEntry();
+    AttrCacheTable::getAttrCatEntry(RELCAT_RELID, j, attrCatBuf);
+    cout << "  " << attrCatBuf->attrName << ": " << attrCatBuf->attrType << endl;
   }
 
-  // Brute force approach to print the relation and attributes
-  for (int i = 0; i < relCatHeader.numEntries; i++)
+  RelCacheTable::getRelCatEntry(ATTRCAT_RELID, relCatBuf);
+  cout << "Relation: " << relCatBuf->relName << endl;
+
+  for (int j = 0; j < relCatBuf->numAttrs; j++)
   {
+    AttrCatEntry *attrCatBuf = new AttrCatEntry();
+    AttrCacheTable::getAttrCatEntry(ATTRCAT_RELID, j, attrCatBuf);
+    cout << "  " << attrCatBuf->attrName << ": " << attrCatBuf->attrType << endl;
+  }
 
-    Attribute relCatRecord[RELCAT_NO_ATTRS]; // will store the record from the relation catalog
+  RelCacheTable::getRelCatEntry(2, relCatBuf);
+  cout << "Relation: " << relCatBuf->relName << endl;
 
-    relCatBuffer.getRecord(relCatRecord, i);
-
-    printf("Relation: %s\n", relCatRecord[RELCAT_REL_NAME_INDEX].sVal);
-
-    for (int k = 0; k < attrBlockLL.size(); k++)
-    {
-      RecBuffer attrCatBuffer(attrBlockLL[k]);
-      attrCatBuffer.getHeader(&attrCatHeader);
-
-      for (int j = 0; j < attrCatHeader.numEntries; j++)
-      {
-
-        // declare attrCatRecord and load the attribute catalog entry into it
-        Attribute attrCatRecord[ATTRCAT_NO_ATTRS];
-        attrCatBuffer.getRecord(attrCatRecord, j);
-        if (
-            strcmp(relCatRecord[RELCAT_REL_NAME_INDEX].sVal, attrCatRecord[ATTRCAT_REL_NAME_INDEX].sVal) == 0)
-        {
-          if (strcmp(relCatRecord[RELCAT_REL_NAME_INDEX].sVal, "Students") == 0)
-          {
-            if (strcmp(attrCatRecord[ATTRCAT_ATTR_NAME_INDEX].sVal, "Class") == 0)
-            {
-              strcpy(attrCatRecord[ATTRCAT_ATTR_NAME_INDEX].sVal, "Batch");
-            }
-          }
-          const char *attrType = attrCatRecord[ATTRCAT_ATTR_TYPE_INDEX].nVal == NUMBER ? "NUM" : "STR";
-          printf("  %s: %s\n", attrCatRecord[ATTRCAT_ATTR_NAME_INDEX].sVal, attrType);
-        }
-      }
-      printf("\n");
-    }
+  for (int j = 0; j < relCatBuf->numAttrs; j++)
+  {
+    AttrCatEntry *attrCatBuf = new AttrCatEntry();
+    AttrCacheTable::getAttrCatEntry(2, j, attrCatBuf);
+    cout << "  " << attrCatBuf->attrName << ": " << attrCatBuf->attrType << endl;
   }
 
   return 0;
