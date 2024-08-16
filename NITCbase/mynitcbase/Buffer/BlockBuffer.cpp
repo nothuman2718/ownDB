@@ -64,6 +64,10 @@ int RecBuffer::getRecord(union Attribute *rec, int slotNum)
     int recordSize = attrCount * ATTR_SIZE;
 
     int offset = HEADER_SIZE + slotCount + (recordSize * slotNum);
+    // proof that each record block only contain records specific to a single relation
+    // SlotMap is generated dynamically based on the number of attributes so, here when we are acessing records based on this calculation.
+    // This calculation is based on the assumption that the slotMap is at the beginning of the block and the records are stored after the slotMap
+    // so slot map must be constant. So we cannot keep records of different relations in the same block.
 
     // unsigned char *slotPointer = &buffer/* calculate buffer + offset */;
 
