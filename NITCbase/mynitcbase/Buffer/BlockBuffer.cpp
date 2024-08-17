@@ -67,7 +67,7 @@ int RecBuffer::getRecord(union Attribute *rec, int slotNum)
     // proof that each record block only contain records specific to a single relation
     // SlotMap is generated dynamically based on the number of attributes so, here when we are acessing records based on this calculation.
     // This calculation is based on the assumption that the slotMap is at the beginning of the block and the records are stored after the slotMap
-    // so slot map must be constant. So we cannot keep records of different relations in the same block.
+    // so slot map must be constant and also number of attributes. So we cannot keep records of different relations in the same block.
 
     // unsigned char *slotPointer = &buffer/* calculate buffer + offset */;
 
@@ -102,4 +102,61 @@ int BlockBuffer::loadBlockAndGetBufferPtr(unsigned char **buffPtr)
     *buffPtr = StaticBuffer::blocks[bufferNum];
 
     return SUCCESS;
+}
+
+/* used to get the slotmap from a record block
+NOTE: this function expects the caller to allocate memory for `*slotMap`
+*/
+int RecBuffer::getSlotMap(unsigned char *slotMap)
+{
+    unsigned char *bufferPtr;
+
+    // get the starting address of the buffer containing the block using loadBlockAndGetBufferPtr().
+    int ret = loadBlockAndGetBufferPtr(&bufferPtr);
+    if (ret != SUCCESS)
+    {
+        return ret;
+    }
+
+    struct HeadInfo head;
+    // get the header of the block using getHeader() function
+    this->getHeader(&head);
+
+    int slotCount = head.numSlots;
+
+    // get a pointer to the beginning of the slotmap in memory by offsetting HEADER_SIZE
+    unsigned char *slotMapInBuffer = bufferPtr + HEADER_SIZE;
+
+    // copy the values from `slotMapInBuffer` to `slotMap` (size is `slotCount`)
+    memcpy(slotMap, slotMapInBuffer, slotCount);
+
+    return SUCCESS;
+}
+
+int compareAttrs(union Attribute attr1, union Attribute attr2, int attrType)
+{
+
+    double diff;
+    // if attrType == STRING)
+    //     diff = strcmp(attr1.sval, attr2.sval)
+
+    // else
+    //     diff = attr1.nval - attr2.nval
+
+    /*
+    if diff > 0 then return 1
+    if diff < 0 then return -1
+    if diff = 0 then return 0
+    */
+    if (attrType == STRING)
+        diff = strcmp(attr1.sVal, attr2.sVal);
+    else
+        diff = attr1.nVal - attr2.nVal;
+
+    if (diff > 0)
+        return 1;
+    else if (diff < 0)
+        return -1;
+    else
+        return 0;
 }

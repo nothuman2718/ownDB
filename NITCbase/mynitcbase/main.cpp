@@ -26,36 +26,37 @@ int main(int argc, char *argv[])
 
           printf("  %s: %s\n", attrName, attrType);
   */
-  RelCatEntry *relCatBuf = new RelCatEntry();
-  RelCacheTable::getRelCatEntry(RELCAT_RELID, relCatBuf);
-  cout << "Relation: " << relCatBuf->relName << endl;
+  // RelCatEntry *relCatBuf = new RelCatEntry();
+  // RelCacheTable::getRelCatEntry(RELCAT_RELID, relCatBuf);
+  // cout << "Relation: " << relCatBuf->relName << endl;
 
-  for (int j = 0; j < relCatBuf->numAttrs; j++)
-  {
-    AttrCatEntry *attrCatBuf = new AttrCatEntry();
-    AttrCacheTable::getAttrCatEntry(RELCAT_RELID, j, attrCatBuf);
-    cout << "  " << attrCatBuf->attrName << ": " << attrCatBuf->attrType << endl;
-  }
+  // for (int j = 0; j < relCatBuf->numAttrs; j++)
+  // {
+  //   AttrCatEntry *attrCatBuf = new AttrCatEntry();
+  //   AttrCacheTable::getAttrCatEntry(RELCAT_RELID, j, attrCatBuf);
+  //   cout << "  " << attrCatBuf->attrName << ": " << attrCatBuf->attrType << endl;
+  // }
 
-  RelCacheTable::getRelCatEntry(ATTRCAT_RELID, relCatBuf);
-  cout << "Relation: " << relCatBuf->relName << endl;
+  // RelCacheTable::getRelCatEntry(ATTRCAT_RELID, relCatBuf);
+  // cout << "Relation: " << relCatBuf->relName << endl;
 
-  for (int j = 0; j < relCatBuf->numAttrs; j++)
-  {
-    AttrCatEntry *attrCatBuf = new AttrCatEntry();
-    AttrCacheTable::getAttrCatEntry(ATTRCAT_RELID, j, attrCatBuf);
-    cout << "  " << attrCatBuf->attrName << ": " << attrCatBuf->attrType << endl;
-  }
+  // for (int j = 0; j < relCatBuf->numAttrs; j++)
+  // {
+  //   AttrCatEntry *attrCatBuf = new AttrCatEntry();
+  //   AttrCacheTable::getAttrCatEntry(ATTRCAT_RELID, j, attrCatBuf);
+  //   cout << "  " << attrCatBuf->attrName << ": " << attrCatBuf->attrType << endl;
+  // }
 
-  RelCacheTable::getRelCatEntry(2, relCatBuf);
-  cout << "Relation: " << relCatBuf->relName << endl;
+  // RelCacheTable::getRelCatEntry(2, relCatBuf);
+  // cout << "Relation: " << relCatBuf->relName << endl;
 
-  for (int j = 0; j < relCatBuf->numAttrs; j++)
-  {
-    AttrCatEntry *attrCatBuf = new AttrCatEntry();
-    AttrCacheTable::getAttrCatEntry(2, j, attrCatBuf);
-    cout << "  " << attrCatBuf->attrName << ": " << attrCatBuf->attrType << endl;
-  }
+  // for (int j = 0; j < relCatBuf->numAttrs; j++)
+  // {
+  //   AttrCatEntry *attrCatBuf = new AttrCatEntry();
+  //   AttrCacheTable::getAttrCatEntry(2, j, attrCatBuf);
+  //   cout << "  " << attrCatBuf->attrName << ": " << attrCatBuf->attrType << endl;
+  // }
 
-  return 0;
+  // return 0;
+  return FrontendInterface::handleFrontend(argc, argv);
 }
