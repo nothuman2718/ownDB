@@ -143,6 +143,7 @@ int OpenRelTable::openRel(char relName[ATTR_SIZE])
     // relcatRecId stores the rec-id of the relation `relName` in the Relation Catalog.
     Attribute check_relname;
     strcpy(check_relname.sVal, relName);
+    // TODO's: Get this dynamically from RELCAT's ATTRCAT
     char def_RELCAT_ATTR_RELNAME[16] = "RelName";
     RecId relcatRecId = BlockAccess::linearSearch(RELCAT_RELID, def_RELCAT_ATTR_RELNAME, check_relname, EQ);
 
@@ -185,6 +186,8 @@ int OpenRelTable::openRel(char relName[ATTR_SIZE])
     attribute of the relation relName by multiple calls of BlockAccess::linearSearch()
     care should be taken to reset the searchIndex of the relation, ATTRCAT_RELID,
     corresponding to Attribute Catalog before the first call to linearSearch().*/
+
+    // TODO's: Get this dynamically from ATTRCAT's ATTRCAT
     char def_ATTRCAT_ATTR_RELNAME[16] = "RelName";
     RelCacheTable::resetSearchIndex(ATTRCAT_RELID);
     for (int i = 0; i < totalAttrs; i++)

@@ -100,7 +100,7 @@ RecId BlockAccess::linearSearch(int relId, char attrName[ATTR_SIZE], union Attri
         Attribute recordAttrVal = record[attrCatEntry.offset];
         int cmpVal; // will store the difference between the attributes
         // set cmpVal using compareAttrs()
-        cmpVal = compareAttrs(attrVal, recordAttrVal, attrCatEntry.attrType);
+        cmpVal = compareAttrs(recordAttrVal, attrVal, attrCatEntry.attrType);
 
         /* Next task is to check whether this record satisfies the given condition.
            It is determined based on the output of previous comparison and
