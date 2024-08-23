@@ -19,10 +19,6 @@ StaticBuffer::StaticBuffer()
         memcpy(blockAllocMap + blockNum * BLOCK_SIZE, block, BLOCK_SIZE);
     }
 
-    for (int i = 0; i < DISK_BLOCKS; i++)
-    {
-        printf("%d ", blockAllocMap[i]);
-    }
     // initialise all blocks as free
     for (int bufferIndex = 0; bufferIndex < BUFFER_CAPACITY; bufferIndex++)
     {

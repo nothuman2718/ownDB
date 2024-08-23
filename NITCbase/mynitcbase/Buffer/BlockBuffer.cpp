@@ -317,8 +317,6 @@ int BlockBuffer::getFreeBlock(char blockType)
     // TODO: Cross check whether blockType is char or int
     //  iterate through the StaticBuffer::blockAllocMap and find the block number
     //  of a free block in the disk.
-    cout << "Inside getFreeBlock():\n\n"
-         << endl;
     int blockNumber = -1;
     int type = 0;
     for (int i = 0; i < DISK_BLOCKS; i++)
@@ -326,7 +324,6 @@ int BlockBuffer::getFreeBlock(char blockType)
         if (StaticBuffer::blockAllocMap[i] == UNUSED_BLK)
         {
             blockNumber = i;
-            cout << " Alloted Block Number in getFreeBlock(): " << blockNumber << endl;
             if (blockType == 'R')
                 StaticBuffer::blockAllocMap[i] = REC;
             else if (blockType == 'I')

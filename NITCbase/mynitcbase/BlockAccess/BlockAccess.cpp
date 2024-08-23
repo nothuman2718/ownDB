@@ -316,14 +316,12 @@ int BlockAccess::insert(int relId, Attribute *record)
     RelCacheTable::getRelCatEntry(relId, &relCatEntry);
 
     int blockNum = relCatEntry.firstBlk;
-    cout << "Block num: " << blockNum << endl;
 
     // rec_id will be used to store where the new record will be inserted
     RecId rec_id = {-1, -1};
 
     int numOfSlots = relCatEntry.numSlotsPerBlk;
     int numOfAttributes = relCatEntry.numAttrs;
-    cout << "Number of RECORDS:  " << relCatEntry.numRecs << endl;
 
     int prevBlockNum = -1;
 
@@ -334,9 +332,6 @@ int BlockAccess::insert(int relId, Attribute *record)
     */
     while (blockNum != -1)
     {
-        cout << "inside while loop: " << endl;
-        cout << "prevBlockNum: " << prevBlockNum << endl;
-        cout << "blockNum inside while: " << blockNum << endl;
         // create a RecBuffer object for blockNum (using appropriate constructor!)
         RecBuffer recBuffer(blockNum);
 
@@ -391,7 +386,6 @@ int BlockAccess::insert(int relId, Attribute *record)
         // let ret be the return value of getBlockNum() function call
         RecBuffer recBuffer;
         int ret = recBuffer.getBlockNum(); // In this function we are already assigning a header to the block
-        cout << "New block num: " << ret << endl;
 
         if (ret == E_DISKFULL)
         {
@@ -428,13 +422,6 @@ int BlockAccess::insert(int relId, Attribute *record)
         recBuffer.setHeader(&header);
 
         recBuffer.getHeader(&header);
-        cout << "Header block type: " << header.blockType << endl;
-        cout << "Header pblock: " << header.pblock << endl;
-        cout << "Header lblock: " << header.lblock << endl;
-        cout << "Header rblock: " << header.rblock << endl;
-        cout << "Header numEntries: " << header.numEntries << endl;
-        cout << "Header numAttrs: " << header.numAttrs << endl;
-        cout << "Header numSlots: " << header.numSlots << endl;
 
         /*
             set block's slot map with all slots marked as free
@@ -477,8 +464,6 @@ int BlockAccess::insert(int relId, Attribute *record)
     // create a RecBuffer object for rec_id.block
     // insert the record into rec_id'th slot using RecBuffer.setRecord())
     RecBuffer recBuffer(rec_id.block);
-    cout << "Final Alloted block: " << rec_id.block << endl;
-    cout << "Final Alloted slot: " << rec_id.slot << endl;
     recBuffer.setRecord(record, rec_id.slot);
 
     /* update the slot map of the block by marking entry of the slot to
