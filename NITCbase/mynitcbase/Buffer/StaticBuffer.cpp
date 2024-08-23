@@ -1,11 +1,28 @@
 #include "StaticBuffer.h"
+#include <string.h>
+#include <stdio.h>
+#include <iostream>
+using namespace std;
 
 unsigned char StaticBuffer::blocks[BUFFER_CAPACITY][BLOCK_SIZE];
 struct BufferMetaInfo StaticBuffer::metainfo[BUFFER_CAPACITY];
+unsigned char StaticBuffer::blockAllocMap[DISK_BLOCKS];
 
 StaticBuffer::StaticBuffer()
 {
+    // copy blockAllocMap blocks from disk to buffer (using readblock() of disk)
+    // blocks 0 to 3
+    unsigned char block[BLOCK_SIZE];
+    for (int blockNum = 0; blockNum < 4; blockNum++)
+    {
+        Disk::readBlock(block, blockNum);
+        memcpy(blockAllocMap + blockNum * BLOCK_SIZE, block, BLOCK_SIZE);
+    }
 
+    for (int i = 0; i < DISK_BLOCKS; i++)
+    {
+        printf("%d ", blockAllocMap[i]);
+    }
     // initialise all blocks as free
     for (int bufferIndex = 0; bufferIndex < BUFFER_CAPACITY; bufferIndex++)
     {
@@ -13,27 +30,6 @@ StaticBuffer::StaticBuffer()
         metainfo[bufferIndex].dirty = false;
         metainfo[bufferIndex].blockNum = -1;
         metainfo[bufferIndex].timeStamp = -1;
-    }
-}
-
-/*
-At this stage, we are not writing back from the buffer to the disk since we are
-not modifying the buffer. So, we will define an empty destructor for now. In
-subsequent stages, we will implement the write-back functionality here.
-*/
-// write back all modified blocks on system exit
-StaticBuffer::~StaticBuffer()
-{
-    /*iterate through all the buffer blocks,
-      write back blocks with metainfo as free=false,dirty=true
-      using Disk::writeBlock()
-      */
-    for (int bufferIndex = 0; bufferIndex < BUFFER_CAPACITY; bufferIndex++)
-    {
-        if (!metainfo[bufferIndex].free && metainfo[bufferIndex].dirty)
-        {
-            Disk::writeBlock(blocks[bufferIndex], metainfo[bufferIndex].blockNum);
-        }
     }
 }
 
@@ -181,4 +177,31 @@ int StaticBuffer::setDirtyBit(int blockNum)
     metainfo[bufferNum].dirty = true;
     // return SUCCESS
     return SUCCESS;
+}
+
+/*
+At this stage, we are not writing back from the buffer to the disk since we are
+not modifying the buffer. So, we will define an empty destructor for now. In
+subsequent stages, we will implement the write-back functionality here.
+*/
+// write back all modified blocks on system exit
+StaticBuffer::~StaticBuffer()
+{
+    // copy blockAllocMap blocks from buffer to disk(using writeblock() of disk)
+    // blocks 0 to 3
+    for (int blockNum = 0; blockNum < 4; blockNum++)
+    {
+        Disk::writeBlock(blockAllocMap + blockNum * BLOCK_SIZE, blockNum);
+    }
+    /*iterate through all the buffer blocks,
+      write back blocks with metainfo as free=false,dirty=true
+      using Disk::writeBlock()
+      */
+    for (int bufferIndex = 0; bufferIndex < BUFFER_CAPACITY; bufferIndex++)
+    {
+        if (!metainfo[bufferIndex].free && metainfo[bufferIndex].dirty)
+        {
+            Disk::writeBlock(blocks[bufferIndex], metainfo[bufferIndex].blockNum);
+        }
+    }
 }

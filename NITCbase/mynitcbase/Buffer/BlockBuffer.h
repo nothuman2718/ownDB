@@ -7,7 +7,8 @@
 #include "../define/constants.h"
 #include "StaticBuffer.h"
 
-struct HeadInfo {
+struct HeadInfo
+{
   int32_t blockType;
   int32_t pblock;
   int32_t lblock;
@@ -18,36 +19,40 @@ struct HeadInfo {
   unsigned char reserved[4];
 };
 
-typedef union Attribute {
+typedef union Attribute
+{
   double nVal;
   char sVal[ATTR_SIZE];
 } Attribute;
 
 int compareAttrs(Attribute attr1, Attribute attr2, int attrType);
 
-struct InternalEntry {
+struct InternalEntry
+{
   int32_t lChild;
   union Attribute attrVal;
   int32_t rChild;
 };
 
-struct Index {
+struct Index
+{
   union Attribute attrVal;
   int32_t block;
   int32_t slot;
   unsigned char unused[8];
 };
 
-class BlockBuffer {
- protected:
+class BlockBuffer
+{
+protected:
   // field
   int blockNum;
   // methods
   int loadBlockAndGetBufferPtr(unsigned char **buffPtr);
-  int getFreeBlock(int blockType);
+  int getFreeBlock(char blockType);
   int setBlockType(int blockType);
 
- public:
+public:
   // methods
   BlockBuffer(char blockType);
   BlockBuffer(int blockNum);
@@ -57,8 +62,9 @@ class BlockBuffer {
   void releaseBlock();
 };
 
-class RecBuffer : public BlockBuffer {
- public:
+class RecBuffer : public BlockBuffer
+{
+public:
   // methods
   RecBuffer();
   RecBuffer(int blockNum);
@@ -68,28 +74,31 @@ class RecBuffer : public BlockBuffer {
   int setRecord(union Attribute *rec, int slotNum);
 };
 
-class IndBuffer : public BlockBuffer {
- public:
+class IndBuffer : public BlockBuffer
+{
+public:
   IndBuffer(int blockNum);
   IndBuffer(char blockType);
   virtual int getEntry(void *ptr, int indexNum) = 0;
   virtual int setEntry(void *ptr, int indexNum) = 0;
 };
 
-class IndInternal : public IndBuffer {
- public:
+class IndInternal : public IndBuffer
+{
+public:
   IndInternal();
   IndInternal(int blockNum);
   int getEntry(void *ptr, int indexNum);
   int setEntry(void *ptr, int indexNum);
 };
 
-class IndLeaf : public IndBuffer {
- public:
+class IndLeaf : public IndBuffer
+{
+public:
   IndLeaf();
   IndLeaf(int blockNum);
   int getEntry(void *ptr, int indexNum);
   int setEntry(void *ptr, int indexNum);
 };
 
-#endif  // NITCBASE_BLOCKBUFFER_H
+#endif // NITCBASE_BLOCKBUFFER_H
