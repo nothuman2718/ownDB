@@ -55,15 +55,15 @@ int Frontend::insert_into_table_values(char relname[ATTR_SIZE], int attr_count, 
 
 int Frontend::select_from_table(char relname_source[ATTR_SIZE], char relname_target[ATTR_SIZE])
 {
-  // Algebra::project
-  return SUCCESS;
+
+  return Algebra::project(relname_source, relname_target);
 }
 
 int Frontend::select_attrlist_from_table(char relname_source[ATTR_SIZE], char relname_target[ATTR_SIZE],
                                          int attr_count, char attr_list[][ATTR_SIZE])
 {
   // Algebra::project
-  return SUCCESS;
+  return Algebra::project(relname_source, relname_target, attr_count, attr_list);
 }
 
 int Frontend::select_from_table_where(char relname_source[ATTR_SIZE], char relname_target[ATTR_SIZE],
@@ -73,11 +73,43 @@ int Frontend::select_from_table_where(char relname_source[ATTR_SIZE], char relna
   return Algebra::select(relname_source, relname_target, attribute, op, value);
 }
 
-int Frontend::select_attrlist_from_table_where(char relname_source[ATTR_SIZE], char relname_target[ATTR_SIZE],
-                                               int attr_count, char attr_list[][ATTR_SIZE],
-                                               char attribute[ATTR_SIZE], int op, char value[ATTR_SIZE])
+int Frontend::select_attrlist_from_table_where(
+    char relname_source[ATTR_SIZE], char relname_target[ATTR_SIZE],
+    int attr_count, char attr_list[][ATTR_SIZE],
+    char attribute[ATTR_SIZE], int op, char value[ATTR_SIZE])
 {
-  // Algebra::select + Algebra::project??
+  char TEMPI[] = ".temp";
+  // Call select() method of the Algebra Layer to create a temporary target relation
+  int ret = Algebra::select(relname_source, TEMPI, attribute, op, value);
+  if (ret != SUCCESS)
+  {
+    return ret;
+  }
+
+  // Open the TEMPI relation using OpenRelTable::openRel()
+  int tempRelId = OpenRelTable::openRel(TEMPI);
+  if (tempRelId < 0)
+  {
+    Schema::deleteRel(TEMPI);
+    return tempRelId;
+  }
+
+  // Call project() method of the Algebra Layer to create the actual target relation
+  ret = Algebra::project(TEMPI, relname_target, attr_count, attr_list);
+  if (ret != SUCCESS)
+  {
+    OpenRelTable::closeRel(tempRelId);
+    Schema::deleteRel(TEMPI);
+    return ret;
+  }
+
+  // Close the TEMPI relation using OpenRelTable::closeRel()
+  OpenRelTable::closeRel(tempRelId);
+
+  // Delete the TEMPI relation using Schema::deleteRel()
+  Schema::deleteRel(TEMPI);
+
+  // Return any error codes from project() or SUCCESS otherwise
   return SUCCESS;
 }
 
