@@ -294,15 +294,46 @@ OpenRelTable::~OpenRelTable()
         }
     }
 
-    // free all the memory that you allocated in the constructor
-    for (int i = 0; i <= 1; i++)
+    /**** Closing the catalog relations in the relation cache ****/
+
+    // releasing the relation cache entry of the attribute catalog
+
+    if (RelCacheTable::relCache[ATTRCAT_RELID]->dirty)
     {
-        if (RelCacheTable::relCache[i] != nullptr)
-        {
-            free(RelCacheTable::relCache[i]);
-            RelCacheTable::relCache[i] = nullptr;
-        }
+
+        /* Get the Relation Catalog entry from RelCacheTable::relCache
+        Then convert it to a record using RelCacheTable::relCatEntryToRecord(). */
+        Attribute record[RELCAT_NO_ATTRS];
+        RelCacheTable::relCatEntryToRecord(&RelCacheTable::relCache[ATTRCAT_RELID]->relCatEntry, record);
+
+        // declaring an object of RecBuffer class to write back to the buffer
+        RecId recId = RelCacheTable::relCache[ATTRCAT_RELID]->recId;
+        RecBuffer relCatBlock(recId.block);
+
+        // Write back to the buffer using relCatBlock.setRecord() with recId.slot
+        relCatBlock.setRecord(record, recId.slot);
     }
+    // free the memory dynamically allocated to this RelCacheEntry
+    free(RelCacheTable::relCache[ATTRCAT_RELID]);
+
+    // releasing the relation cache entry of the relation catalog
+
+    if (RelCacheTable::relCache[RELCAT_RELID]->dirty)
+    {
+
+        /* Get the Relation Catalog entry from RelCacheTable::relCache
+        Then convert it to a record using RelCacheTable::relCatEntryToRecord(). */
+        Attribute record[RELCAT_NO_ATTRS];
+        RelCacheTable::relCatEntryToRecord(&RelCacheTable::relCache[RELCAT_RELID]->relCatEntry, record);
+
+        // declaring an object of RecBuffer class to write back to the buffer
+        RecId recId = RelCacheTable::relCache[RELCAT_RELID]->recId;
+        RecBuffer relCatBlock(recId.block);
+
+        // Write back to the buffer using relCatBlock.setRecord() with recId.slot
+        relCatBlock.setRecord(record, recId.slot);
+    }
+    // free the memory dynamically allocated for this RelCacheEntry
 
     for (int i = 0; i <= 1; i++)
     {
