@@ -6,6 +6,7 @@
 #include "../Disk_Class/Disk.h"
 #include "../define/constants.h"
 #include "StaticBuffer.h"
+#include "../Cache/AttrCacheTable.h"
 
 struct HeadInfo
 {

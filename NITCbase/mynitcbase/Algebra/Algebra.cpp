@@ -136,14 +136,12 @@ int Algebra::select(char srcRel[ATTR_SIZE], char targetRel[ATTR_SIZE], char attr
         first record.
     */
     RelCacheTable::resetSearchIndex(srcRelId);
-    // AttrCacheTable::resetSearchIndex(srcRelId, attr);
+    AttrCacheTable::resetSearchIndex(srcRelId, attr);
 
     // read every record that satisfies the condition by repeatedly calling
     // BlockAccess::search() until there are no more records to be read
-
     while (BlockAccess::search(srcRelId, record, attr, attrVal, op) == SUCCESS)
     {
-
         // ret = BlockAccess::insert(targetRelId, record);
         ret = BlockAccess::insert(targetRelId, record);
 
