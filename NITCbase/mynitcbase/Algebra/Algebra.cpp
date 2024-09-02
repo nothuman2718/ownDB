@@ -113,10 +113,10 @@ int Algebra::select(char srcRel[ATTR_SIZE], char targetRel[ATTR_SIZE], char attr
     /* If opening fails, delete the target relation by calling Schema::deleteRel()
        and return the error value returned from openRel() */
     int targetRelId = OpenRelTable::openRel(targetRel);
-    if (targetRelId == E_CACHEFULL)
+    if (targetRelId < 0 || targetRelId >= MAX_OPEN)
     {
         Schema::deleteRel(targetRel);
-        return E_CACHEFULL;
+        return targetRelId;
     }
 
     /*** Selecting and inserting records into the target relation ***/
@@ -167,7 +167,9 @@ int Algebra::insert(char relName[ATTR_SIZE], int nAttrs, char record[][ATTR_SIZE
     // if relName is equal to "RELATIONCAT" or "ATTRIBUTECAT"
     // return E_NOTPERMITTED;
     // Get these dynamically from the schema
-    if (strcmp(relName, "RELATIONCAT") == 0 || strcmp(relName, "ATTRIBUTECAT") == 0)
+    if (
+        strcmp(relName, (char *)RELCAT_RELNAME) == 0 ||
+        strcmp(relName, (char *)ATTRCAT_RELNAME) == 0)
     {
         return E_NOTPERMITTED;
     }
@@ -244,9 +246,7 @@ int Algebra::insert(char relName[ATTR_SIZE], int nAttrs, char record[][ATTR_SIZE
 
     // insert the record by calling BlockAccess::insert() function
     // let retVal denote the return value of insert call
-    int retVal = BlockAccess::insert(relId, recordValues);
-
-    return retVal;
+    return BlockAccess::insert(relId, recordValues);
 }
 
 int Algebra::project(char srcRel[ATTR_SIZE], char targetRel[ATTR_SIZE])
@@ -304,10 +304,10 @@ int Algebra::project(char srcRel[ATTR_SIZE], char targetRel[ATTR_SIZE])
 
     // If opening fails, delete the target relation by calling Schema::deleteRel() of
     // return the error value returned from openRel().
-    if (targetRelId == E_CACHEFULL)
+    if (targetRelId < 0 || targetRelId >= MAX_OPEN)
     {
         Schema::deleteRel(targetRel);
-        return E_CACHEFULL;
+        return targetRelId;
     }
 
     /*** Inserting projected records into the target relation ***/
@@ -415,7 +415,7 @@ int Algebra::project(char srcRel[ATTR_SIZE], char targetRel[ATTR_SIZE], int tar_
     {
         AttrCatEntry attrCatEntry;
         ret = AttrCacheTable::getAttrCatEntry(srcRelId, tar_Attrs[i], &attrCatEntry);
-        if (ret != E_ATTREXIST)
+        if (ret != SUCCESS)
         {
             Schema::closeRel(targetRel);
             Schema::deleteRel(targetRel);

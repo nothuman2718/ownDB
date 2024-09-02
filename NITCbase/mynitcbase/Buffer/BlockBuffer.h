@@ -50,7 +50,7 @@ protected:
   int blockNum;
   // methods
   int loadBlockAndGetBufferPtr(unsigned char **buffPtr);
-  int getFreeBlock(char blockType);
+  int getFreeBlock(int blockType);
   int setBlockType(int blockType);
 
 public:
