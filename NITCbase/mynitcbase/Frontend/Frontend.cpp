@@ -1,8 +1,9 @@
 #include "Frontend.h"
-
+#include <iostream>
 #include <cstring>
 #include <iostream>
 
+using namespace std;
 int Frontend::create_table(char relname[ATTR_SIZE], int no_attrs, char attributes[][ATTR_SIZE], int type_attrs[])
 {
   return Schema::createRel(relname, no_attrs, attributes, type_attrs);
@@ -38,14 +39,13 @@ int Frontend::alter_table_rename_column(char relname[ATTR_SIZE], char attrname_f
 
 int Frontend::create_index(char relname[ATTR_SIZE], char attrname[ATTR_SIZE])
 {
-  // Schema::createIndex
-  return SUCCESS;
+
+  return Schema::createIndex(relname, attrname);
 }
 
 int Frontend::drop_index(char relname[ATTR_SIZE], char attrname[ATTR_SIZE])
 {
-  // Schema::dropIndex
-  return SUCCESS;
+  return Schema::dropIndex(relname, attrname);
 }
 
 int Frontend::insert_into_table_values(char relname[ATTR_SIZE], int attr_count, char attr_values[][ATTR_SIZE])
@@ -88,7 +88,7 @@ int Frontend::select_attrlist_from_table_where(
 
   // Open the TEMPI relation using OpenRelTable::openRel()
   int tempRelId = OpenRelTable::openRel(TEMPI);
-  if (tempRelId < 0)
+  if (tempRelId < 0 || tempRelId >= MAX_OPEN)
   {
     Schema::deleteRel(TEMPI);
     return tempRelId;
@@ -108,7 +108,6 @@ int Frontend::select_attrlist_from_table_where(
 
   // Delete the TEMPI relation using Schema::deleteRel()
   Schema::deleteRel(TEMPI);
-
   // Return any error codes from project() or SUCCESS otherwise
   return SUCCESS;
 }

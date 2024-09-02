@@ -22,8 +22,7 @@ int Schema::createRel(char relName[], int nAttrs, char attrs[][ATTR_SIZE], int a
     // for attribute value attribute "RelName" = relNameAsAttribute using
     // BlockAccess::linearSearch() with OP = EQ
     RelCacheTable::resetSearchIndex(RELCAT_RELID);
-    char def_RELCAT_ATTR_RELNAME[16] = "RelName";
-    targetRelId = BlockAccess::linearSearch(RELCAT_RELID, def_RELCAT_ATTR_RELNAME, relNameAsAttribute, EQ);
+    targetRelId = BlockAccess::linearSearch(RELCAT_RELID, (char *)RELCAT_ATTR_RELNAME, relNameAsAttribute, EQ);
 
     // if a relation with name `relName` already exists  ( linearSearch() does
     //                                                     not return {-1,-1} )
@@ -107,7 +106,7 @@ int Schema::createRel(char relName[], int nAttrs, char attrs[][ATTR_SIZE], int a
         retVal = BlockAccess::insert(ATTRCAT_RELID, attrCatRecord);
         if (retVal != SUCCESS)
         {
-            deleteRel(relName);
+            Schema::deleteRel(relName);
             return E_DISKFULL;
         }
     }
@@ -122,7 +121,9 @@ int Schema::deleteRel(char *relName)
     //     return E_NOTPERMITTED
     // (check if the relation names are either "RELATIONCAT" and "ATTRIBUTECAT".
     // you may use the following constants: RELCAT_RELNAME and ATTRCAT_RELNAME)
-    if (strcmp(relName, RELCAT_RELNAME) == 0 || strcmp(relName, ATTRCAT_RELNAME) == 0)
+    if (
+        strcmp(relName, (char *)RELCAT_RELNAME) == 0 ||
+        strcmp(relName, (char *)ATTRCAT_RELNAME) == 0)
     {
         return E_NOTPERMITTED;
     }
@@ -148,6 +149,87 @@ int Schema::deleteRel(char *relName)
        correct, it should not reach that point. That error could only occur
        if the BlockBuffer was initialized with an invalid block number.
     */
+}
+
+int Schema::createIndex(char relName[ATTR_SIZE], char attrName[ATTR_SIZE])
+{
+    // if the relName is either Relation Catalog or Attribute Catalog,
+    // return E_NOTPERMITTED
+    // (check if the relation names are either "RELATIONCAT" and "ATTRIBUTECAT".
+    // you may use the following constants: RELCAT_RELNAME and ATTRCAT_RELNAME)
+    if (
+        strcmp(relName, (char *)RELCAT_RELNAME) == 0 ||
+        strcmp(relName, (char *)ATTRCAT_RELNAME) == 0)
+    {
+        return E_NOTPERMITTED;
+    }
+
+    // get the relation's rel-id using OpenRelTable::getRelId() method
+    int relId = OpenRelTable::getRelId(relName);
+
+    // if relation is not open in open relation table, return E_RELNOTOPEN
+    // (check if the value returned from getRelId function call = E_RELNOTOPEN)
+    if (relId == E_RELNOTOPEN)
+    {
+        return E_RELNOTOPEN;
+    }
+
+    // create a bplus tree using BPlusTree::bPlusCreate() and return the value
+
+    return BPlusTree::bPlusCreate(relId, attrName);
+}
+
+int Schema::dropIndex(char *relName, char *attrName)
+{
+    // if the relName is either Relation Catalog or Attribute Catalog,
+    // return E_NOTPERMITTED
+    // (check if the relation names are either "RELATIONCAT" and "ATTRIBUTECAT".
+    // you may use the following constants: RELCAT_RELNAME and ATTRCAT_RELNAME)
+    if (
+        strcmp(relName, (char *)RELCAT_RELNAME) == 0 ||
+        strcmp(relName, (char *)ATTRCAT_RELNAME) == 0)
+    {
+        return E_NOTPERMITTED;
+    }
+
+    // get the rel-id using OpenRelTable::getRelId()
+    int relId = OpenRelTable::getRelId(relName);
+
+    // if relation is not open in open relation table, return E_RELNOTOPEN
+    // (check if the value returned from getRelId function call = E_RELNOTOPEN)
+    if (relId == E_RELNOTOPEN)
+    {
+        return E_RELNOTOPEN;
+    }
+
+    // get the attribute catalog entry corresponding to the attribute
+    // using AttrCacheTable::getAttrCatEntry()
+    // if the attribute does not exist, return E_ATTRNOTEXIST
+    // (check if the value returned from getAttrCatEntry function call = E_ATTRNOTEXIST)
+    AttrCatEntry attrCatEntry;
+    if (AttrCacheTable::getAttrCatEntry(relId, attrName, &attrCatEntry) == E_ATTRNOTEXIST)
+    {
+        return E_ATTRNOTEXIST;
+    }
+
+    // if getAttrCatEntry() fails, return E_ATTRNOTEXIST
+
+    int rootBlock = attrCatEntry.rootBlock;
+
+    if (rootBlock == -1)
+    {
+        return E_NOINDEX;
+    }
+
+    // destroy the bplus tree rooted at rootBlock using BPlusTree::bPlusDestroy()
+    BPlusTree::bPlusDestroy(rootBlock);
+
+    // set rootBlock = -1 in the attribute cache entry of the attribute using
+    // AttrCacheTable::setAttrCatEntry()
+    attrCatEntry.rootBlock = -1;
+    AttrCacheTable::setAttrCatEntry(relId, attrName, &attrCatEntry);
+
+    return SUCCESS;
 }
 
 int Schema::openRel(char relName[ATTR_SIZE])
@@ -191,8 +273,11 @@ int Schema::renameRel(char oldRelName[ATTR_SIZE], char newRelName[ATTR_SIZE])
     // return E_NOTPERMITTED
     // (check if the relation names are either "RELATIONCAT" and "ATTRIBUTECAT".
     // you may use the following constants: RELCAT_RELNAME and ATTRCAT_RELNAME)
-    if (strcmp(oldRelName, RELCAT_RELNAME) == 0 || strcmp(oldRelName, ATTRCAT_RELNAME) == 0 ||
-        strcmp(newRelName, RELCAT_RELNAME) == 0 || strcmp(newRelName, ATTRCAT_RELNAME) == 0)
+    if (
+        strcmp(oldRelName, (char *)RELCAT_RELNAME) == 0 ||
+        strcmp(oldRelName, (char *)ATTRCAT_RELNAME) == 0 ||
+        strcmp(newRelName, (char *)RELCAT_RELNAME) == 0 ||
+        strcmp(newRelName, (char *)ATTRCAT_RELNAME) == 0)
     {
         return E_NOTPERMITTED;
     }
@@ -216,7 +301,9 @@ int Schema::renameAttr(char relName[ATTR_SIZE], char oldAttrName[ATTR_SIZE], cha
     // return E_NOTPERMITTED
     // (check if the relation names are either "RELATIONCAT" and "ATTRIBUTECAT".
     // you may use the following constants: RELCAT_RELNAME and ATTRCAT_RELNAME)
-    if (strcmp(relName, RELCAT_RELNAME) == 0 || strcmp(relName, ATTRCAT_RELNAME) == 0)
+    if (
+        strcmp(relName, (char *)RELCAT_RELNAME) == 0 ||
+        strcmp(relName, (char *)ATTRCAT_RELNAME) == 0)
     {
         return E_NOTPERMITTED;
     }

@@ -15,16 +15,28 @@ BlockBuffer::BlockBuffer(int blockNum)
 
 BlockBuffer::BlockBuffer(char blockType)
 {
-    // allocate a block on the disk and a buffer in memory to hold the new block of
-    // given type using getFreeBlock function and get the return error codes if any.
+    int blockTypeNum;
+    if (blockType == 'R')
+    {
+        blockTypeNum = REC;
+    }
+    else if (blockType == 'I')
+    {
+        blockTypeNum = IND_INTERNAL;
+    }
+    else if (blockType == 'L')
+    {
+        blockTypeNum = IND_LEAF;
+    }
+    else
+    {
+        blockTypeNum = UNUSED_BLK;
+    }
+    int blockNum = getFreeBlock(blockTypeNum);
 
-    // set the blockNum field of the object to that of the allocated block
-    // number if the method returned a valid block number,
-    // otherwise set the error code returned as the block number.
-    this->blockNum = getFreeBlock(blockType);
-
-    // (The caller must check if the constructor allocatted block successfully
-    // by checking the value of block number field.)
+    this->blockNum = blockNum;
+    if (blockNum < 0 || blockNum >= DISK_BLOCKS)
+        return;
 }
 
 // calls the parent class constructor
@@ -71,55 +83,36 @@ int BlockBuffer::getHeader(struct HeadInfo *head)
         return ret; // return any errors that might have occured in the process
     }
 
-    // populate the numEntries, numAttrs and numSlots fields in *head
-    memcpy(&head->numSlots, bufferPtr + 24, 4);
-    memcpy(&head->numEntries, bufferPtr + 16, 4);
-    memcpy(&head->numAttrs, bufferPtr + 20, 4);
-    memcpy(&head->rblock, bufferPtr + 12, 4);
-    memcpy(&head->lblock, bufferPtr + 8, 4);
+    HeadInfo *header = (HeadInfo *)bufferPtr;
+
+    head->numSlots = header->numSlots;
+    head->numEntries = header->numEntries;
+    head->numAttrs = header->numAttrs;
+    head->lblock = header->lblock;
+    head->rblock = header->rblock;
+    head->pblock = header->pblock;
 
     return SUCCESS;
 }
 
 int BlockBuffer::setHeader(struct HeadInfo *head)
 {
-    // Flag: Who exactly is calling this function? Will the header contain total information
     unsigned char *bufferPtr;
-    // get the starting address of the buffer containing the block using
-    // loadBlockAndGetBufferPtr(&bufferPtr).
     int ret = loadBlockAndGetBufferPtr(&bufferPtr);
 
-    // if loadBlockAndGetBufferPtr(&bufferPtr) != SUCCESS
-    // return the value returned by the call.
     if (ret != SUCCESS)
-    {
         return ret;
-    }
 
-    // cast bufferPtr to type HeadInfo*
-    struct HeadInfo *bufferHeader = (struct HeadInfo *)bufferPtr;
+    HeadInfo *header = (HeadInfo *)bufferPtr;
 
-    // copy the fields of the HeadInfo pointed to by head (except reserved) to
-    // the header of the block (pointed to by bufferHeader)
-    //(hint: bufferHeader->numSlots = head->numSlots )
-    bufferHeader->blockType = head->blockType;
-    bufferHeader->lblock = head->lblock;
-    bufferHeader->rblock = head->rblock;
-    bufferHeader->numEntries = head->numEntries;
-    bufferHeader->numAttrs = head->numAttrs;
-    bufferHeader->numSlots = head->numSlots;
-    bufferHeader->pblock = head->pblock;
+    header->numSlots = head->numSlots;
+    header->numEntries = head->numEntries;
+    header->numAttrs = head->numAttrs;
+    header->lblock = head->lblock;
+    header->rblock = head->rblock;
+    header->pblock = head->pblock;
 
-    // update dirty bit by calling StaticBuffer::setDirtyBit()
-    // if setDirtyBit() failed, return the error code
-    ret = StaticBuffer::setDirtyBit(this->blockNum);
-    if (ret != SUCCESS)
-    {
-        return ret;
-    }
-
-    // return SUCCESS;
-    return SUCCESS;
+    return StaticBuffer::setDirtyBit(this->blockNum);
 }
 
 // load the record at slotNum into the argument pointer
@@ -226,42 +219,32 @@ NOTE: this function expects the caller to allocate memory for the argument
    buffer due to LRU buffer replacement. So, it will need to be bought back
    to the buffer before any operations can be done.
  */
-int BlockBuffer::loadBlockAndGetBufferPtr(unsigned char **buffPtr)
+int BlockBuffer::loadBlockAndGetBufferPtr(unsigned char **bufferPtr)
 {
-    /* check whether the block is already present in the buffer
-       using StaticBuffer.getBufferNum() */
     int bufferNum = StaticBuffer::getBufferNum(this->blockNum);
 
-    // if present (!=E_BLOCKNOTINBUFFER),
-    // set the timestamp of the corresponding buffer to 0 and increment the
-    // timestamps of all other occupied buffers in BufferMetaInfo.
-    if (bufferNum != E_BLOCKNOTINBUFFER)
+    if (bufferNum == E_BLOCKNOTINBUFFER)
     {
-        StaticBuffer::metainfo[bufferNum].timeStamp = 0;
-        for (int i = 0; i < BUFFER_CAPACITY; i++)
-        {
-            if (StaticBuffer::metainfo[i].free == false)
-            {
-                StaticBuffer::metainfo[i].timeStamp++;
-            }
-        }
+        bufferNum = StaticBuffer::getFreeBuffer(this->blockNum);
+
+        if (bufferNum == E_OUTOFBOUND)
+            return E_OUTOFBOUND;
+
+        Disk::readBlock(StaticBuffer::blocks[bufferNum], this->blockNum);
     }
     else
     {
-        // if not present
-        // get a free buffer using StaticBuffer.getFreeBuffer()
-        // if the call returns E_OUTOFBOUND, return E_OUTOFBOUND here as
-        // the blockNum is invalid
-        // Read the block into the free buffer using readBlock()
-        bufferNum = StaticBuffer::getFreeBuffer(this->blockNum);
-        if (bufferNum == E_OUTOFBOUND)
+        for (int i = 0; i < BUFFER_CAPACITY; i++)
         {
-            return E_OUTOFBOUND;
+            if (!StaticBuffer::metainfo[i].free)
+                StaticBuffer::metainfo[i].timeStamp++;
         }
-        Disk::readBlock(StaticBuffer::blocks[bufferNum], this->blockNum);
+
+        StaticBuffer::metainfo[bufferNum].timeStamp = 0;
     }
-    *buffPtr = StaticBuffer::blocks[bufferNum];
-    // return SUCCESS;
+
+    *bufferPtr = StaticBuffer::blocks[bufferNum];
+
     return SUCCESS;
 }
 /* used to get the slotmap from a record block
@@ -280,7 +263,7 @@ int RecBuffer::getSlotMap(unsigned char *slotMap)
 
     struct HeadInfo head;
     // get the header of the block using getHeader() function
-    this->getHeader(&head);
+    ret = BlockBuffer::getHeader(&head);
 
     int slotCount = head.numSlots;
 
@@ -321,107 +304,63 @@ int RecBuffer::setSlotMap(unsigned char *slotMap)
 
     // update dirty bit using StaticBuffer::setDirtyBit
     // if setDirtyBit failed, return the value returned by the call
-    ret = StaticBuffer::setDirtyBit(this->blockNum);
-    if (ret != SUCCESS)
-    {
-        return ret;
-    }
-
-    // return SUCCESS
-    return SUCCESS;
+    return StaticBuffer::setDirtyBit(this->blockNum);
 }
 
-int BlockBuffer::getFreeBlock(char blockType)
+int BlockBuffer::getFreeBlock(int blockType)
 {
-    // TODO: Cross check whether blockType is char or int
-    //  iterate through the StaticBuffer::blockAllocMap and find the block number
-    //  of a free block in the disk.
-    int blockNumber = -1;
-    int type = 0;
+    int freeBlock = -1;
     for (int i = 0; i < DISK_BLOCKS; i++)
     {
         if (StaticBuffer::blockAllocMap[i] == UNUSED_BLK)
         {
-            blockNumber = i;
-            if (blockType == 'R')
-                StaticBuffer::blockAllocMap[i] = REC;
-            else if (blockType == 'I')
-                StaticBuffer::blockAllocMap[i] = IND_INTERNAL;
-            else if (blockType == 'L')
-                StaticBuffer::blockAllocMap[i] = IND_LEAF;
-            else if (blockType == 'B')
-                StaticBuffer::blockAllocMap[i] = BMAP;
-            else if (blockType == 'D')
-                StaticBuffer::blockAllocMap[i] = UNUSED_BLK;
-            type = StaticBuffer::blockAllocMap[i];
+            freeBlock = i;
             break;
         }
     }
 
-    // if no block is free, return E_DISKFULL.
-    if (blockNumber == -1)
+    if (freeBlock == -1)
     {
         return E_DISKFULL;
     }
 
-    // set the object's blockNum to the block number of the free block.
-    this->blockNum = blockNumber;
+    this->blockNum = freeBlock;
 
-    // find a free buffer using StaticBuffer::getFreeBuffer() .
-    int bufferNum = StaticBuffer::getFreeBuffer(blockNumber);
+    int freeBuffer = StaticBuffer::getFreeBuffer(freeBlock);
 
-    // initialize the header of the block passing a struct HeadInfo with values
-    // pblock: -1, lblock: -1, rblock: -1, numEntries: 0, numAttrs: 0, numSlots: 0
-    // to the setHeader() function.
-    struct HeadInfo head;
-    head.blockType = type;
-    head.pblock = -1;
-    head.lblock = -1;
-    head.rblock = -1;
-    head.numEntries = 0;
-    head.numAttrs = 0;
-    head.numSlots = 0;
-    this->setHeader(&head);
+    HeadInfo header;
+    header.pblock = -1;
+    header.lblock = -1;
+    header.rblock = -1;
+    header.numEntries = 0;
+    header.numAttrs = 0;
+    header.numSlots = 0;
 
-    // update the block type of the block to the input block type using setBlockType().
-    // this->setBlockType(blockType);
+    this->setHeader(&header);
+    this->setBlockType(blockType);
 
-    // return block number of the free block.
-    return blockNumber;
+    return freeBlock;
 }
 
 void BlockBuffer::releaseBlock()
 {
 
-    // if blockNum is INVALID_BLOCKNUM (-1), or it is invalidated already, do nothing
-    if (this->blockNum == INVALID_BLOCKNUM)
+    if (blockNum < 0 || blockNum >= DISK_BLOCKS || StaticBuffer::blockAllocMap[blockNum] == UNUSED_BLK)
     {
         return;
     }
 
-    // else
-    /* get the buffer number of the buffer assigned to the block
-       using StaticBuffer::getBufferNum().
-       (this function return E_BLOCKNOTINBUFFER if the block is not
-       currently loaded in the buffer)
-        */
-    int bufferNum = StaticBuffer::getBufferNum(this->blockNum);
+    int bufferNum = StaticBuffer::getBufferNum(blockNum);
 
-    // if the block is present in the buffer, free the buffer
-    // by setting the free flag of its StaticBuffer::tableMetaInfo entry
-    // to true.
-
-    if (bufferNum != E_BLOCKNOTINBUFFER)
+    if (bufferNum == E_BLOCKNOTINBUFFER)
     {
-        StaticBuffer::metainfo[bufferNum].free = true;
+        return;
     }
 
-    // free the block in disk by setting the data type of the entry
-    // corresponding to the block number in StaticBuffer::blockAllocMap
-    // to UNUSED_BLK.
-    StaticBuffer::blockAllocMap[this->blockNum] = UNUSED_BLK;
+    StaticBuffer::metainfo[bufferNum].free = true;
 
-    // set the object's blockNum to INVALID_BLOCK (-1)
+    StaticBuffer::blockAllocMap[blockNum] = UNUSED_BLK;
+
     this->blockNum = INVALID_BLOCKNUM;
 }
 
@@ -514,7 +453,11 @@ int IndLeaf::getEntry(void *ptr, int indexNum)
     /* the indexNum'th entry will begin at an offset of
        HEADER_SIZE + (indexNum * LEAF_ENTRY_SIZE)  from bufferPtr */
     unsigned char *entryPtr = bufferPtr + HEADER_SIZE + (indexNum * LEAF_ENTRY_SIZE);
-    memcpy((struct Index *)ptr, entryPtr, LEAF_ENTRY_SIZE);
+    // memcpy((struct Index *)ptr, entryPtr, LEAF_ENTRY_SIZE);
+    struct Index *index = (struct Index *)ptr;
+    memcpy(&(index->attrVal), entryPtr, sizeof(Attribute));
+    memcpy(&(index->block), entryPtr + 16, 4);
+    memcpy(&(index->slot), entryPtr + 20, 4);
 
     // return SUCCESS
     return SUCCESS;
@@ -522,10 +465,108 @@ int IndLeaf::getEntry(void *ptr, int indexNum)
 
 int IndInternal::setEntry(void *ptr, int indexNum)
 {
-    return 0;
-}
+    // if the indexNum is not in the valid range of [0, MAX_KEYS_INTERNAL-1]
+    //     return E_OUTOFBOUND.
+    if (indexNum < 0 || indexNum >= MAX_KEYS_INTERNAL)
+    {
+        return E_OUTOFBOUND;
+    }
 
+    unsigned char *bufferPtr;
+    /* get the starting address of the buffer containing the block
+       using loadBlockAndGetBufferPtr(&bufferPtr). */
+    int ret = loadBlockAndGetBufferPtr(&bufferPtr);
+
+    // if loadBlockAndGetBufferPtr(&bufferPtr) != SUCCESS
+    //     return the value returned by the call.
+    if (ret != SUCCESS)
+    {
+        return ret;
+    }
+
+    // typecast the void pointer to an internal entry pointer
+    struct InternalEntry *internalEntry = (struct InternalEntry *)ptr;
+
+    /*
+    - copy the entries from *internalEntry to the indexNum`th entry
+    - make sure that each field is copied individually as in the following code
+    - the lChild and rChild fields of InternalEntry are of type int32_t
+    - int32_t is a type of int that is guaranteed to be 4 bytes across every
+      C++ implementation. sizeof(int32_t) = 4
+    */
+
+    /* the indexNum'th entry will begin at an offset of
+       HEADER_SIZE + (indexNum * (sizeof(int) + ATTR_SIZE) )         [why?]
+       from bufferPtr */
+
+    unsigned char *entryPtr = bufferPtr + HEADER_SIZE + (indexNum * 20);
+
+    memcpy(entryPtr, &(internalEntry->lChild), 4);
+    memcpy(entryPtr + 4, &(internalEntry->attrVal), ATTR_SIZE);
+    memcpy(entryPtr + 20, &(internalEntry->rChild), 4);
+
+    // update dirty bit using setDirtyBit()
+    // if setDirtyBit failed, return the value returned by the call
+    return StaticBuffer::setDirtyBit(this->blockNum);
+}
 int IndLeaf::setEntry(void *ptr, int indexNum)
 {
-    return 0;
+    // if the indexNum is not in the valid range of [0, MAX_KEYS_LEAF-1]
+    //     return E_OUTOFBOUND.
+    if (indexNum < 0 || indexNum >= MAX_KEYS_LEAF)
+        return E_OUTOFBOUND;
+
+    unsigned char *bufferPtr;
+    /* get the starting address of the buffer containing the block
+       using loadBlockAndGetBufferPtr(&bufferPtr). */
+    int ret = loadBlockAndGetBufferPtr(&bufferPtr);
+
+    // if loadBlockAndGetBufferPtr(&bufferPtr) != SUCCESS
+    //     return the value returned by the call.
+    if (ret != SUCCESS)
+    {
+        return ret;
+    }
+
+    // copy the Index at ptr to indexNum'th entry in the buffer using memcpy
+
+    /* the indexNum'th entry will begin at an offset of
+       HEADER_SIZE + (indexNum * LEAF_ENTRY_SIZE)  from bufferPtr */
+    unsigned char *entryPtr = bufferPtr + HEADER_SIZE + (indexNum * LEAF_ENTRY_SIZE);
+    struct Index *index = (struct Index *)ptr;
+    memcpy(entryPtr, &(index->attrVal), sizeof(Attribute));
+    memcpy(entryPtr + 16, &(index->block), sizeof(int));
+    memcpy(entryPtr + 20, &(index->slot), sizeof(int));
+
+    // update dirty bit using setDirtyBit()
+    return StaticBuffer::setDirtyBit(this->blockNum);
+    // if setDirtyBit failed, return the value returned by the call
+}
+
+int BlockBuffer::setBlockType(int blockType)
+{
+
+    unsigned char *bufferPtr;
+    /* get the starting address of the buffer containing the block
+       using loadBlockAndGetBufferPtr(&bufferPtr). */
+    int ret = loadBlockAndGetBufferPtr(&bufferPtr);
+
+    // if loadBlockAndGetBufferPtr(&bufferPtr) != SUCCESS
+    // return the value returned by the call.
+    if (ret != SUCCESS)
+        return ret;
+
+    // store the input block type in the first 4 bytes of the buffer.
+    // (hint: cast bufferPtr to int32_t* and then assign it)
+    // *((int32_t *)bufferPtr) = blockType;
+    *((int32_t *)bufferPtr) = blockType;
+
+    // update the StaticBuffer::blockAllocMap entry corresponding to the
+    // object's block number to `blockType`.
+    StaticBuffer::blockAllocMap[this->blockNum] = blockType;
+
+    // update dirty bit by calling StaticBuffer::setDirtyBit()
+    // if setDirtyBit() failed
+    // return the returned value from the call
+    return StaticBuffer::setDirtyBit(this->blockNum);
 }
