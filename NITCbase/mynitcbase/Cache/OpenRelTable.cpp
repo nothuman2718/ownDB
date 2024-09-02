@@ -108,15 +108,19 @@ int OpenRelTable::getFreeOpenRelTableEntry()
 
 int OpenRelTable::openRel(char relName[ATTR_SIZE])
 {
-    int alreadyExists = OpenRelTable::getRelId(relName);
+    int exist = OpenRelTable::getRelId(relName);
 
-    if (alreadyExists >= 0)
-        return alreadyExists;
+    if (exist >= 0)
+    {
+        return exist;
+    }
 
     int freeSlot = OpenRelTable::getFreeOpenRelTableEntry();
 
     if (freeSlot == E_CACHEFULL)
+    {
         return E_CACHEFULL;
+    }
 
     Attribute relNameAttribute;
     memcpy(relNameAttribute.sVal, relName, ATTR_SIZE);
@@ -124,7 +128,9 @@ int OpenRelTable::openRel(char relName[ATTR_SIZE])
     RecId relcatRecId = BlockAccess::linearSearch(RELCAT_RELID, (char *)RELCAT_ATTR_RELNAME, relNameAttribute, EQ);
 
     if (relcatRecId.block == -1 && relcatRecId.slot == -1)
+    {
         return E_RELNOTEXIST;
+    }
     RecBuffer recBuffer(relcatRecId.block);
 
     Attribute record[RELCAT_NO_ATTRS];

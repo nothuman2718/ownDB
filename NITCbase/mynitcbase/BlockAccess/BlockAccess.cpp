@@ -309,7 +309,9 @@ int BlockAccess::insert(int relId, Attribute *record)
     int ret = RelCacheTable::getRelCatEntry(relId, &relCatBuf);
 
     if (ret != SUCCESS)
+    {
         return ret;
+    }
 
     int blockNum = relCatBuf.firstBlk;
 
@@ -354,14 +356,18 @@ int BlockAccess::insert(int relId, Attribute *record)
     if (recId.block == -1 || recId.slot == -1)
     {
         if (relId == RELCAT_RELID)
+        {
             return E_MAXRELATIONS;
+        }
 
         RecBuffer newBlock;
 
         int newBlockNum = newBlock.getBlockNum();
 
         if (newBlockNum == E_DISKFULL)
+        {
             return E_DISKFULL;
+        }
 
         recId.block = newBlockNum;
         recId.slot = 0;
@@ -418,11 +424,16 @@ int BlockAccess::insert(int relId, Attribute *record)
         AttrCatEntry attrCatBuf;
         AttrCacheTable::getAttrCatEntry(relId, attrOffset, &attrCatBuf);
         if (attrCatBuf.rootBlock == -1)
+        {
             continue;
+        }
 
         int ret = BPlusTree::bPlusInsert(relId, attrCatBuf.attrName, record[attrOffset], recId);
         if (ret == E_DISKFULL)
+        {
             flag = E_INDEX_BLOCKS_RELEASED;
+            BPlusTree::bPlusDestroy(attrCatBuf.rootBlock);
+        }
     }
 
     return flag;
@@ -508,7 +519,9 @@ int BlockAccess::deleteRelation(char relName[ATTR_SIZE])
     RecId recId = linearSearch(RELCAT_RELID, (char *)RELCAT_ATTR_RELNAME, relNameAttribute, EQ);
 
     if (recId.block == -1 || recId.slot == -1)
+    {
         return E_RELNOTEXIST;
+    }
 
     Attribute relCatEntryRecord[RELCAT_NO_ATTRS];
 
@@ -536,7 +549,9 @@ int BlockAccess::deleteRelation(char relName[ATTR_SIZE])
         RecId attrCatRecId = linearSearch(ATTRCAT_RELID, (char *)ATTRCAT_ATTR_RELNAME, relNameAttribute, EQ);
 
         if (attrCatRecId.slot == -1 || attrCatRecId.block == -1)
+        {
             break;
+        }
 
         numAttrsDeleted++;
 
@@ -589,7 +604,9 @@ int BlockAccess::deleteRelation(char relName[ATTR_SIZE])
 
         // condition to handle b+ trees
         if (rootBlock != -1)
+        {
             BPlusTree::bPlusDestroy(rootBlock);
+        }
     }
 
     HeadInfo relCatHeader;
