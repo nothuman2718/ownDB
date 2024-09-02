@@ -244,7 +244,6 @@ int BPlusTree::bPlusCreate(int relId, char attrName[ATTR_SIZE])
 {
     // if relId is either RELCAT_RELID or ATTRCAT_RELID:
     //     return E_NOTPERMITTED;
-    cout << "Creating Index : " << endl;
     if (relId == RELCAT_RELID || relId == ATTRCAT_RELID)
     {
         return E_NOTPERMITTED;
@@ -266,7 +265,6 @@ int BPlusTree::bPlusCreate(int relId, char attrName[ATTR_SIZE])
     if (attrCatEntry.rootBlock != -1)
     {
         // (B+ Tree already exists for the attribute)
-        cout << "Already Relation Exists : " << endl;
         return SUCCESS;
     }
 
@@ -306,7 +304,6 @@ int BPlusTree::bPlusCreate(int relId, char attrName[ATTR_SIZE])
     {
 
         // declare a RecBuffer object for `block` (using appropriate constructor)
-        cout << "Block Number and Slot of Record : " << block << " ";
         RecBuffer recBuf(block);
 
         unsigned char slotMap[relCatEntry.numSlotsPerBlk];
@@ -322,7 +319,6 @@ int BPlusTree::bPlusCreate(int relId, char attrName[ATTR_SIZE])
                 // (slot is empty)
                 continue;
             }
-            cout << slot << endl;
             Attribute record[relCatEntry.numAttrs];
             // load the record corresponding to the slot into `record`
             // using RecBuffer::getRecord().
@@ -355,7 +351,6 @@ int BPlusTree::bPlusCreate(int relId, char attrName[ATTR_SIZE])
 
         // set block = rblock of current block (from the header)
         block = headInfo.rblock;
-        cout << "\n\n";
     }
 
     return SUCCESS;
@@ -523,8 +518,6 @@ int BPlusTree::findLeafToInsert(int rootBlock, Attribute attrVal, int attrType)
             blockNum = intEntry.lChild;
         }
     }
-    printf("Attribute Value %s \n", attrVal.sVal);
-    cout << "Found Leaf to Insert() : Block " << blockNum << endl;
     return blockNum;
 }
 
@@ -569,7 +562,6 @@ int BPlusTree::insertIntoLeaf(int relId, char attrName[ATTR_SIZE], int blockNum,
 
         for (int i = 0; i < leafHeader.numEntries; i++)
             leafBlock.setEntry(&indices[i], i);
-        cout << " Inserted into Leaf of blockNum : " << blockNum << endl;
 
         return SUCCESS;
     }
@@ -854,6 +846,5 @@ int BPlusTree::createNewRoot(int relId, char attrName[ATTR_SIZE], Attribute attr
     // in the attribute cache using AttrCacheTable::setAttrCatEntry().
     attrCatEntry.rootBlock = newRootBlkNum;
     AttrCacheTable::setAttrCatEntry(relId, attrName, &attrCatEntry);
-    cout << " Created new Root :" << newRootBlkNum << endl;
     return SUCCESS;
 }

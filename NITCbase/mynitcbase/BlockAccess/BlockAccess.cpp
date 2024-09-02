@@ -58,15 +58,11 @@ RecId BlockAccess::linearSearch(int relId, char attrName[ATTR_SIZE], union Attri
         // get the record with id (block, slot) using RecBuffer::getRecord()
         HeadInfo head;
         recBuffer.getHeader(&head);
-        int numAttrs = head.numAttrs;
-        Attribute record[numAttrs];
-        recBuffer.getRecord(record, slot);
+        unsigned char slotMap[head.numSlots];
+        recBuffer.getSlotMap(slotMap);
 
         // get header of the block using RecBuffer::getHeader() function
         // get slot map of the block using RecBuffer::getSlotMap() function
-
-        unsigned char slotMap[head.numSlots];
-        recBuffer.getSlotMap(slotMap);
 
         // If slot >= the number of slots per block(i.e. no more slots in this block)
         if (slot >= head.numSlots)
@@ -79,8 +75,13 @@ RecId BlockAccess::linearSearch(int relId, char attrName[ATTR_SIZE], union Attri
             continue; // continue to the beginning of this while loop
         }
 
+        int numAttrs = head.numAttrs;
+
         // if slot is free skip the loop
         // (i.e. check if slot'th entry in slot map of block contains SLOT_UNOCCUPIED)
+        Attribute record[numAttrs];
+        recBuffer.getRecord(record, slot);
+
         if (slotMap[slot] == SLOT_UNOCCUPIED)
         {
             // increment slot and continue to the next record slot
@@ -390,9 +391,9 @@ int BlockAccess::insert(int relId, Attribute *record)
         else
         {
             relCatBuf.firstBlk = recId.block;
-            relCatBuf.lastBlk = recId.block;
             RelCacheTable::setRelCatEntry(relId, &relCatBuf);
         }
+        relCatBuf.lastBlk = recId.block;
     }
 
     RecBuffer blockToInsert(recId.block);
